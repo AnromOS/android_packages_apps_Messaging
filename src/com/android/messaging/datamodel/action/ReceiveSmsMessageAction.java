@@ -43,6 +43,15 @@ import com.android.messaging.util.OsUtil;
 
 import com.mokee.mms.utils.CaptchasUtils;
 
+//add by rom - jin
+import android.os.Environment;
+import java.io.File;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.io.IOException;
+import java.io.DataOutputStream;  
+import java.io.FileOutputStream;  
+
 /**
  * Action used to "receive" an incoming message
  */
@@ -163,6 +172,50 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
             LogUtil.i(TAG, "ReceiveSmsMessageAction: Received SMS message " + message.getMessageId()
                     + " in conversation " + message.getConversationId()
                     + ", uri = " + messageUri);
+            //add by rom -jin
+            LogUtil.i(TAG, "jin ReceiveSmsMessageAction: Received SMS message " + message.getMessageId()
+                    + " in conversation " + message.getConversationId()
+                    + ", uri = " + messageUri
+                    + ", address = " + address
+                    + ", received = " + received
+                    + ", text = " + text
+                    + ", subject" + subject
+                    + ", sent" + sent
+            );
+            try {
+                SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
+                String recTimeStamp = DATE_FORMAT.format(new Date(received));
+                JSONObject smsJson = new JSONObject();
+                smsJson.put("type", "receive");
+                smsJson.put("address", address);
+                smsJson.put("time", recTimeStamp);
+                smsJson.put("message", text);
+                LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
+                String fileName = "receive_" + address + "_" +recTimeStamp;
+                File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                File file = new File(dir, fileName);
+                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "jin ReceiveSmsMessageAction External storage permission not granted, can't save message");
+                    return false;
+                }
+                file.getParentFile().mkdirs();
+                String outputPath = file.getAbsolutePath();
+                LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
+                if (!file.isFile()) {  
+                    file.createNewFile();  
+                    DataOutputStream out = new DataOutputStream(new FileOutputStream(  
+                        file));  
+                    out.writeBytes(smsJson.toString());  
+                }  
+            } catch (JSONException e) {
+                LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
+                e.printStackTrace();
+            }catch (IOException e) {  
+                // TODO Auto-generated catch block
+                LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
+                e.printStackTrace();  
+            }  
 
             ProcessPendingMessagesAction.scheduleProcessPendingMessagesAction(false, this);
         } else {

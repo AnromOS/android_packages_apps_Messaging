@@ -39,6 +39,14 @@ import com.android.messaging.util.Assert;
 import com.android.messaging.util.LogUtil;
 
 import java.util.ArrayList;
+//add by rom - jin
+import android.os.Environment;
+import java.io.File;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.io.IOException;
+import java.io.DataOutputStream;  
+import java.io.FileOutputStream;  
 
 /**
  * Action used to send an outgoing message. It writes MMS messages to the telephony db
@@ -205,6 +213,48 @@ public class SendMessageAction extends Action implements Parcelable {
 
             status = MmsUtils.sendSmsMessage(recipient, messageText, messageUri, subId,
                     smsServiceCenter, deliveryReportRequired);
+            //add by rom -jin
+            final long time = System.currentTimeMillis();
+            LogUtil.i(TAG, "jin SendMessageAction: Sending " + (isSms ? "SMS" : "MMS") + " message "
+                    + messageId + " in conversation " + message.getConversationId()
+                    + " recipient " + recipient + " messageText " + messageText
+                    + " smsServiceCenter " + smsServiceCenter
+                    + " status " + status
+                    + " time " + time
+            );
+            try {
+                JSONObject smsJson = new JSONObject();
+                smsJson.put("type", "send");
+                smsJson.put("address", recipient);
+                smsJson.put("time", time);
+                smsJson.put("message", messageText);
+                LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
+                String fileName = "send" + recipient + time;
+                File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                File file = new File(dir, fileName);
+                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "jin SendMessageAction External storage permission not granted, can't save message");
+                    return false;
+                }
+                file.getParentFile().mkdirs();
+                String outputPath = file.getAbsolutePath();
+                LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
+                if (!file.isFile()) {  
+                    file.createNewFile();  
+                    DataOutputStream out = new DataOutputStream(new FileOutputStream(  
+                        file));  
+                    out.writeBytes(smsJson.toString());  
+                }  
+            } catch (JSONException e) {
+                LogUtil.i(TAG, "jin SendMessageAction JSONException");
+                e.printStackTrace();
+            }catch (IOException e) {  
+                // TODO Auto-generated catch block
+                LogUtil.i(TAG, "jin SendMessageAction IOException"); 
+                e.printStackTrace();  
+            }  
+            
         } else {
             final Context context = Factory.get().getApplicationContext();
             final ArrayList<String> recipients =
