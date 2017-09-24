@@ -50,7 +50,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.IOException;
 import java.io.DataOutputStream;  
-import java.io.FileOutputStream;  
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Action used to "receive" an incoming message
@@ -194,11 +196,7 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                 String fileName = "receive_" + address + "_" +recTimeStamp;
                 File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
                 File file = new File(dir, fileName);
-                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                    Log.i(TAG, "jin ReceiveSmsMessageAction External storage permission not granted, can't save message");
-                    return false;
-                }
+                //~ File file = new File("/data/rommessages");
                 file.getParentFile().mkdirs();
                 String outputPath = file.getAbsolutePath();
                 LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
