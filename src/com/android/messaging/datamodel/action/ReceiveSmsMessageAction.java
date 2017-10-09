@@ -53,6 +53,8 @@ import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
 
 /**
  * Action used to "receive" an incoming message
@@ -202,9 +204,13 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                 LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
                 if (!file.isFile()) {  
                     file.createNewFile();  
-                    DataOutputStream out = new DataOutputStream(new FileOutputStream(  
-                        file));  
-                    out.writeBytes(smsJson.toString());  
+                    //~ DataOutputStream out = new DataOutputStream(new FileOutputStream(  
+                        //~ file));  
+                    //~ out.writeBytes(smsJson.toString());
+                    OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
+                    BufferedWriter writer=new BufferedWriter(write);
+                    writer.write(smsJson.toString());
+                    writer.close();
                 }  
             } catch (JSONException e) {
                 LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
