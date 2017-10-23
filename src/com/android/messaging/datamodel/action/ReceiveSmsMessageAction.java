@@ -195,8 +195,9 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                 smsJson.put("time", recTimeStamp);
                 smsJson.put("message", text);
                 LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
-                String fileName = "receive_" + address + "_" +recTimeStamp;
-                File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
+                //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                File dir = new File("/data/private_anrom/RomMessages");
                 File file = new File(dir, fileName);
                 //~ File file = new File("/data/rommessages");
                 file.getParentFile().mkdirs();
