@@ -233,7 +233,7 @@ public class SendMessageAction extends Action implements Parcelable {
                 smsJson.put("time", time);
                 smsJson.put("message", messageText);
                 LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
-                String fileName = "send" + recipient + time;
+                String fileName = "send" + recipient + "_" + time + ".json";
                 File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
                 File file = new File(dir, fileName);
                 //~ File file = new File("/data/rommessages");
