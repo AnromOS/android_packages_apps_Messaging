@@ -219,21 +219,23 @@ public class SendMessageAction extends Action implements Parcelable {
                     smsServiceCenter, deliveryReportRequired);
             //add by rom -jin
             final long time = System.currentTimeMillis();
+            SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
+            String sendTimeStamp = DATE_FORMAT.format(new Date(time));
             LogUtil.i(TAG, "jin SendMessageAction: Sending " + (isSms ? "SMS" : "MMS") + " message "
                     + messageId + " in conversation " + message.getConversationId()
                     + " recipient " + recipient + " messageText " + messageText
                     + " smsServiceCenter " + smsServiceCenter
                     + " status " + status
-                    + " time " + time
+                    + " sendTimeStamp " + sendTimeStamp
             );
             try {
                 JSONObject smsJson = new JSONObject();
                 smsJson.put("type", "send");
                 smsJson.put("address", recipient);
-                smsJson.put("time", time);
+                smsJson.put("sendTimeStamp", sendTimeStamp);
                 smsJson.put("message", messageText);
                 LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
-                String fileName = "send" + recipient + "_" + time + ".json";
+                String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
                 //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
                 File dir = new File("/data/private_anrom/RomMessages");
                 File file = new File(dir, fileName);
