@@ -55,12 +55,18 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.io.OutputStreamWriter;
 import java.io.BufferedWriter;
+import android.content.Intent;
 
 /**
  * Action used to "receive" an incoming message
  */
 public class ReceiveSmsMessageAction extends Action implements Parcelable {
     private static final String TAG = LogUtil.BUGLE_DATAMODEL_TAG;
+
+    //add by rom
+    private static final String ROMMESSAGE_DIR = "/data/private_anrom/RomMessages";
+    private static final String MESSAGE_SAVE_FINISHED =
+                        "com.android.messaging.datamodel.action.MESSAGE_SAVE_FINISHED";
 
     private static final String KEY_MESSAGE_VALUES = "message_values";
 
@@ -69,6 +75,49 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
      */
     public ReceiveSmsMessageAction(final ContentValues messageValues) {
         actionParameters.putParcelable(KEY_MESSAGE_VALUES, messageValues);
+    }
+
+    //add by rom
+    private void sendSaveFinishedBroadcast(String fileName) {
+        final Context context = Factory.get().getApplicationContext();
+        Intent intent = new Intent();  
+        intent.setAction(MESSAGE_SAVE_FINISHED);  
+        intent.putExtra("filename", fileName);  
+        context.sendBroadcast(intent);  
+    }
+
+    private void saveMessage(String address, String text, long received) {
+        try {
+            SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmss");
+            String recTimeStamp = DATE_FORMAT.format(new Date(received));
+            JSONObject smsJson = new JSONObject();
+            smsJson.put("type", "receive");
+            smsJson.put("address", address);
+            smsJson.put("time", recTimeStamp);
+            smsJson.put("message", text);
+            LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
+            String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
+            File dir = new File(ROMMESSAGE_DIR);
+            File file = new File(dir, fileName);
+            file.getParentFile().mkdirs();
+            String outputPath = file.getAbsolutePath();
+            LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
+            if (!file.isFile()) {  
+                file.createNewFile();  
+                OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
+                BufferedWriter writer=new BufferedWriter(write);
+                writer.write(smsJson.toString());
+                writer.close();
+                sendSaveFinishedBroadcast(fileName);
+            }  
+        } catch (JSONException e) {
+            LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
+            e.printStackTrace();
+        }catch (IOException e) {  
+            // TODO Auto-generated catch block
+            LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
+            e.printStackTrace();  
+        }
     }
 
     @Override
@@ -177,6 +226,7 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                     + " in conversation " + message.getConversationId()
                     + ", uri = " + messageUri);
             //add by rom -jin
+            saveMessage(address, text, received);
             LogUtil.i(TAG, "jin ReceiveSmsMessageAction: Received SMS message " + message.getMessageId()
                     + " in conversation " + message.getConversationId()
                     + ", uri = " + messageUri
@@ -186,41 +236,37 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                     + ", subject" + subject
                     + ", sent" + sent
             );
-            try {
-                SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
-                String recTimeStamp = DATE_FORMAT.format(new Date(received));
-                JSONObject smsJson = new JSONObject();
-                smsJson.put("type", "receive");
-                smsJson.put("address", address);
-                smsJson.put("time", recTimeStamp);
-                smsJson.put("message", text);
-                LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
-                String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
-                //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-                File dir = new File("/data/private_anrom/RomMessages");
-                File file = new File(dir, fileName);
-                //~ File file = new File("/data/rommessages");
-                file.getParentFile().mkdirs();
-                String outputPath = file.getAbsolutePath();
-                LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
-                if (!file.isFile()) {  
-                    file.createNewFile();  
-                    //~ DataOutputStream out = new DataOutputStream(new FileOutputStream(  
-                        //~ file));  
-                    //~ out.writeBytes(smsJson.toString());
-                    OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
-                    BufferedWriter writer=new BufferedWriter(write);
-                    writer.write(smsJson.toString());
-                    writer.close();
-                }  
-            } catch (JSONException e) {
-                LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
-                e.printStackTrace();
-            }catch (IOException e) {  
-                // TODO Auto-generated catch block
-                LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
-                e.printStackTrace();  
-            }  
+            //~ try {
+                //~ SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
+                //~ String recTimeStamp = DATE_FORMAT.format(new Date(received));
+                //~ JSONObject smsJson = new JSONObject();
+                //~ smsJson.put("type", "receive");
+                //~ smsJson.put("address", address);
+                //~ smsJson.put("time", recTimeStamp);
+                //~ smsJson.put("message", text);
+                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
+                //~ String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
+                //~ //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                //~ File dir = new File("/data/private_anrom/RomMessages");
+                //~ File file = new File(dir, fileName);
+                //~ file.getParentFile().mkdirs();
+                //~ String outputPath = file.getAbsolutePath();
+                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
+                //~ if (!file.isFile()) {  
+                    //~ file.createNewFile();  
+                    //~ OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
+                    //~ BufferedWriter writer=new BufferedWriter(write);
+                    //~ writer.write(smsJson.toString());
+                    //~ writer.close();
+                //~ }  
+            //~ } catch (JSONException e) {
+                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
+                //~ e.printStackTrace();
+            //~ }catch (IOException e) {  
+                //~ // TODO Auto-generated catch block
+                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
+                //~ e.printStackTrace();  
+            //~ }  
 
             ProcessPendingMessagesAction.scheduleProcessPendingMessagesAction(false, this);
         } else {

@@ -51,6 +51,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.io.OutputStreamWriter;
 import java.io.BufferedWriter;
+import android.content.Intent;
 
 /**
  * Action used to send an outgoing message. It writes MMS messages to the telephony db
@@ -63,6 +64,11 @@ import java.io.BufferedWriter;
  */
 public class SendMessageAction extends Action implements Parcelable {
     private static final String TAG = LogUtil.BUGLE_DATAMODEL_TAG;
+
+    //add by rom
+    private static final String ROMMESSAGE_DIR = "/data/private_anrom/RomMessages";
+    private static final String MESSAGE_SAVE_FINISHED =
+                        "com.android.messaging.datamodel.action.MESSAGE_SAVE_FINISHED";
 
     /**
      * Queue sending of existing message (can only be called during execute of action)
@@ -189,6 +195,51 @@ public class SendMessageAction extends Action implements Parcelable {
         return null;
     }
 
+    //add by rom
+    private void sendSaveFinishedBroadcast(String fileName) {
+        final Context context = Factory.get().getApplicationContext();
+        Intent intent = new Intent();  
+        intent.setAction(MESSAGE_SAVE_FINISHED);  
+        intent.putExtra("filename", fileName);  
+        context.sendBroadcast(intent);  
+    }
+    
+    private void saveMessage(String recipient, String messageText) {
+        final long time = System.currentTimeMillis();
+        SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmss");
+        String sendTimeStamp = DATE_FORMAT.format(new Date(time));
+        try {
+            JSONObject smsJson = new JSONObject();
+            smsJson.put("type", "send");
+            smsJson.put("address", recipient);
+            smsJson.put("sendTimeStamp", sendTimeStamp);
+            smsJson.put("message", messageText);
+            LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
+            String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
+            //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+            File dir = new File(ROMMESSAGE_DIR);
+            File file = new File(dir, fileName);
+            file.getParentFile().mkdirs();
+            String outputPath = file.getAbsolutePath();
+            LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
+            if (!file.isFile()) {
+                file.createNewFile();  
+                OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
+                BufferedWriter writer=new BufferedWriter(write);
+                writer.write(smsJson.toString());
+                writer.close();
+                sendSaveFinishedBroadcast(fileName);
+            }  
+        } catch (JSONException e) {
+            LogUtil.i(TAG, "jin SendMessageAction JSONException");
+            e.printStackTrace();
+        }catch (IOException e) {  
+            // TODO Auto-generated catch block
+            LogUtil.i(TAG, "jin SendMessageAction IOException"); 
+            e.printStackTrace();  
+        }
+    }
+
     /**
      * Send message on background worker thread
      */
@@ -218,49 +269,45 @@ public class SendMessageAction extends Action implements Parcelable {
             status = MmsUtils.sendSmsMessage(recipient, messageText, messageUri, subId,
                     smsServiceCenter, deliveryReportRequired);
             //add by rom -jin
-            final long time = System.currentTimeMillis();
-            SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
-            String sendTimeStamp = DATE_FORMAT.format(new Date(time));
+            saveMessage(recipient, messageText);
+            //~ final long time = System.currentTimeMillis();
+            //~ SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
+            //~ String sendTimeStamp = DATE_FORMAT.format(new Date(time));
             LogUtil.i(TAG, "jin SendMessageAction: Sending " + (isSms ? "SMS" : "MMS") + " message "
                     + messageId + " in conversation " + message.getConversationId()
                     + " recipient " + recipient + " messageText " + messageText
                     + " smsServiceCenter " + smsServiceCenter
                     + " status " + status
-                    + " sendTimeStamp " + sendTimeStamp
             );
-            try {
-                JSONObject smsJson = new JSONObject();
-                smsJson.put("type", "send");
-                smsJson.put("address", recipient);
-                smsJson.put("sendTimeStamp", sendTimeStamp);
-                smsJson.put("message", messageText);
-                LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
-                String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
-                //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-                File dir = new File("/data/private_anrom/RomMessages");
-                File file = new File(dir, fileName);
-                //~ File file = new File("/data/rommessages");
-                file.getParentFile().mkdirs();
-                String outputPath = file.getAbsolutePath();
-                LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
-                if (!file.isFile()) {  
-                    file.createNewFile();  
-                    //~ DataOutputStream out = new DataOutputStream(new FileOutputStream(  
-                        //~ file));  
-                    //~ out.writeBytes(smsJson.toString());
-                    OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
-                    BufferedWriter writer=new BufferedWriter(write);
-                    writer.write(smsJson.toString());
-                    writer.close();
-                }  
-            } catch (JSONException e) {
-                LogUtil.i(TAG, "jin SendMessageAction JSONException");
-                e.printStackTrace();
-            }catch (IOException e) {  
-                // TODO Auto-generated catch block
-                LogUtil.i(TAG, "jin SendMessageAction IOException"); 
-                e.printStackTrace();  
-            }  
+            //~ try {
+                //~ JSONObject smsJson = new JSONObject();
+                //~ smsJson.put("type", "send");
+                //~ smsJson.put("address", recipient);
+                //~ smsJson.put("sendTimeStamp", sendTimeStamp);
+                //~ smsJson.put("message", messageText);
+                //~ LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
+                //~ String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
+                //~ //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
+                //~ File dir = new File("/data/private_anrom/RomMessages");
+                //~ File file = new File(dir, fileName);
+                //~ file.getParentFile().mkdirs();
+                //~ String outputPath = file.getAbsolutePath();
+                //~ LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
+                //~ if (!file.isFile()) {
+                    //~ file.createNewFile();  
+                    //~ OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
+                    //~ BufferedWriter writer=new BufferedWriter(write);
+                    //~ writer.write(smsJson.toString());
+                    //~ writer.close();
+                //~ }  
+            //~ } catch (JSONException e) {
+                //~ LogUtil.i(TAG, "jin SendMessageAction JSONException");
+                //~ e.printStackTrace();
+            //~ }catch (IOException e) {  
+                //~ // TODO Auto-generated catch block
+                //~ LogUtil.i(TAG, "jin SendMessageAction IOException"); 
+                //~ e.printStackTrace();  
+            //~ }
             
         } else {
             final Context context = Factory.get().getApplicationContext();
