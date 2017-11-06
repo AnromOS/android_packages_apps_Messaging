@@ -67,6 +67,8 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
     private static final String ROMMESSAGE_DIR = "/data/private_anrom/RomMessages";
     private static final String MESSAGE_SAVE_FINISHED =
                         "com.android.messaging.datamodel.action.MESSAGE_SAVE_FINISHED";
+    private static final String MESSAGE_SAVE_FINISHED_PERMISSION =
+                        "com.android.messaging.MESSAGE_SAVE_FINISHED";
 
     private static final String KEY_MESSAGE_VALUES = "message_values";
 
@@ -83,7 +85,7 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
         Intent intent = new Intent();  
         intent.setAction(MESSAGE_SAVE_FINISHED);  
         intent.putExtra("filename", fileName);  
-        context.sendBroadcast(intent);  
+        context.sendBroadcast(intent, MESSAGE_SAVE_FINISHED_PERMISSION);  
     }
 
     private void saveMessage(String address, String text, long received) {
