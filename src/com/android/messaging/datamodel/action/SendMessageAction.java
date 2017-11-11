@@ -206,6 +206,18 @@ public class SendMessageAction extends Action implements Parcelable {
         context.sendBroadcast(intent, MESSAGE_SAVE_FINISHED_PERMISSION);  
     }
     
+    public File getFile(String fileName) {
+        //File dir = Environment.getExternalStoragePublicDirectory(PUBLIC_DIRECTORY_NAME);
+        File dir = new File(ROMMESSAGE_DIR);
+        //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
+        File file = new File(dir, fileName);
+        try {
+            Runtime.getRuntime().exec("chmod 666 " + file);
+        } catch (Exception e){
+            //~ Log.d("jin","chmod callrecording error ", e);
+        }
+        return file;
+    }
     private void saveMessage(String recipient, String messageText) {
         final long time = System.currentTimeMillis();
         SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmss");
@@ -219,13 +231,14 @@ public class SendMessageAction extends Action implements Parcelable {
             LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
             String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
             //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-            File dir = new File(ROMMESSAGE_DIR);
-            File file = new File(dir, fileName);
+            //~ File dir = new File(ROMMESSAGE_DIR);
+            //~ File file = new File(dir, fileName);
+            File file = getFile(fileName);
             file.getParentFile().mkdirs();
             String outputPath = file.getAbsolutePath();
             LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
             if (!file.isFile()) {
-                file.createNewFile();  
+                file.createNewFile();
                 OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
                 BufferedWriter writer=new BufferedWriter(write);
                 writer.write(smsJson.toString());

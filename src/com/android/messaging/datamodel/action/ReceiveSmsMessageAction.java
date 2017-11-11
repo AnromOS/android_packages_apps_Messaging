@@ -81,11 +81,24 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
 
     //add by rom
     private void sendSaveFinishedBroadcast(String fileName) {
-        final Context context = Factory.get().getApplicationContext();
+        Context context = Factory.get().getApplicationContext();
         Intent intent = new Intent();  
         intent.setAction(MESSAGE_SAVE_FINISHED);  
         intent.putExtra("filename", fileName);  
         context.sendBroadcast(intent, MESSAGE_SAVE_FINISHED_PERMISSION);  
+    }
+
+    public File getFile(String fileName) {
+        //File dir = Environment.getExternalStoragePublicDirectory(PUBLIC_DIRECTORY_NAME);
+        File dir = new File(ROMMESSAGE_DIR);
+        //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
+        File file = new File(dir, fileName);
+        try {
+            Runtime.getRuntime().exec("chmod 666 " + file);
+        } catch (Exception e){
+            //~ Log.d("jin","chmod callrecording error ", e);
+        }
+        return file;
     }
 
     private void saveMessage(String address, String text, long received) {
@@ -99,13 +112,14 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
             smsJson.put("message", text);
             LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
             String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
-            File dir = new File(ROMMESSAGE_DIR);
-            File file = new File(dir, fileName);
+            //~ File dir = new File(ROMMESSAGE_DIR);
+            File file = getFile(fileName);//new File(dir, fileName);
+            //~ File file = new File(dir, fileName);
             file.getParentFile().mkdirs();
             String outputPath = file.getAbsolutePath();
             LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
             if (!file.isFile()) {  
-                file.createNewFile();  
+                file.createNewFile();
                 OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
                 BufferedWriter writer=new BufferedWriter(write);
                 writer.write(smsJson.toString());
