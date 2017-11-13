@@ -88,16 +88,32 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
         context.sendBroadcast(intent, MESSAGE_SAVE_FINISHED_PERMISSION);  
     }
 
-    public File getFile(String fileName) {
-        //File dir = Environment.getExternalStoragePublicDirectory(PUBLIC_DIRECTORY_NAME);
-        File dir = new File(ROMMESSAGE_DIR);
-        //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
-        File file = new File(dir, fileName);
+    private void chmod(File file, boolean isDir) {
+        String cmd;
+        if (isDir) {
+            cmd = "chmod 777 ";
+        } else {
+            cmd = "chmod 666 ";
+        }
         try {
-            Runtime.getRuntime().exec("chmod 666 " + file);
+            Runtime.getRuntime().exec(cmd + file);
         } catch (Exception e){
             //~ Log.d("jin","chmod callrecording error ", e);
         }
+    }
+
+    public File getFile(String fileName) {
+        //File dir = Environment.getExternalStoragePublicDirectory(PUBLIC_DIRECTORY_NAME);
+        File dir = new File(ROMMESSAGE_DIR);
+        chmod(dir,true);
+        //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
+        File file = new File(dir, fileName);
+        chmod(file,false);
+        /*try {
+            Runtime.getRuntime().exec("chmod 666 " + file);
+        } catch (Exception e){
+            //~ Log.d("jin","chmod callrecording error ", e);
+        }*/
         return file;
     }
 
