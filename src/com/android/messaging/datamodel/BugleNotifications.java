@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
- * Copyright (C) 2015-2016 The MoKee Open Source Project
+ * Copyright (C) 2015-2018 The MoKee Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import android.text.style.TextAppearanceSpan;
 import com.android.messaging.Factory;
 import com.android.messaging.R;
 import com.android.messaging.datamodel.DatabaseHelper.ConversationColumns;
+import com.android.messaging.datamodel.DatabaseHelper.PartColumns;
 import com.android.messaging.datamodel.MessageNotificationState.BundledMessageNotificationState;
 import com.android.messaging.datamodel.MessageNotificationState.ConversationLineInfo;
 import com.android.messaging.datamodel.MessageNotificationState.MultiConversationNotificationState;
@@ -65,6 +66,8 @@ import com.android.messaging.datamodel.media.MessagePartVideoThumbnailRequestDes
 import com.android.messaging.datamodel.media.UriImageRequestDescriptor;
 import com.android.messaging.datamodel.media.VideoThumbnailRequest;
 import com.android.messaging.receiver.CaptchasReceiver;
+import com.android.messaging.receiver.DeleteMessageReceiver;
+import com.android.messaging.receiver.MarkAsReadReceiver;
 import com.android.messaging.sms.MmsSmsUtils;
 import com.android.messaging.sms.MmsUtils;
 import com.android.messaging.ui.UIIntents;
@@ -193,71 +196,6 @@ public class BugleNotifications {
         if ((coverage & UPDATE_ERRORS) != 0) {
             MessageNotificationState.checkFailedMessages();
         }
-    }
-
-    private static class CaptchasNotificationState extends MessageNotificationState {
-        CaptchasNotificationState() {
-            super(null);
-        }
-
-        @Override
-        protected Style build(Builder builder) {
-            return null;
-        }
-
-        @Override
-        public boolean getNotificationVibrate() {
-            return true;
-        }
-    }
-
-    public static void postCaptchasNotication(String conversationId, String captchas, String captchaProvider) {
-        cancel(PendingIntentConstants.CAPTCHAS_NOTIFICATION_ID);
-        final NotificationState state = MessageNotificationState.getNotificationState();
-        final Context context = Factory.get().getApplicationContext();
-        final Resources resources = context.getResources();
-
-        String title = TextUtils.isEmpty(captchaProvider) ? String.format(context.getString(R.string.captchas_title), captchas)
-                : String.format(context.getString(R.string.captchas_with_provider_title), captchas, captchaProvider);
-        String content = context.getString(R.string.captchas_content);
-
-        Intent pendingIntent = new Intent();
-        pendingIntent.setClass(context, CaptchasReceiver.class);
-        pendingIntent.putExtra("captchas", captchas);
-        pendingIntent.putExtra(ConversationColumns.SMS_THREAD_ID, conversationId);
-        PendingIntent captchasIntent = PendingIntent.getBroadcast(context, 0, pendingIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
-        final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
-        builder.setContentTitle(title)
-                .setTicker(title)
-                .setSmallIcon(R.drawable.ic_sms_light)
-                .setContentText(content)
-                .setWhen(state != null ? state.getLatestReceivedTimestamp() : System.currentTimeMillis())
-        // Returning PRIORITY_HIGH causes L to put up a HUD notification. Without it, the ticker
-        // isn't displayed.
-                .setPriority(Notification.PRIORITY_HIGH)
-                .setContentIntent(captchasIntent)
-                .setSound(state != null ? RingtoneUtil.getNotificationRingtoneUri(state.getRingtoneUri())
-                        : getNotificationRingtoneUriForConversationId(conversationId))
-                .setColor(context.getResources().getColor(R.color.notification_accent_color));
-
-        final NotificationCompat.BigTextStyle bigTextStyle =
-                new NotificationCompat.BigTextStyle(builder);
-        bigTextStyle.setBigContentTitle(title);
-        bigTextStyle.bigText(content);
-        final Notification notification = bigTextStyle.build();
-
-        final NotificationManagerCompat notificationManager =
-                NotificationManagerCompat.from(Factory.get().getApplicationContext());
-
-        int defaults = Notification.DEFAULT_LIGHTS;
-        if (BugleNotifications.shouldVibrate(new CaptchasNotificationState())) {
-            defaults |= Notification.DEFAULT_VIBRATE;
-        }
-        notification.defaults = defaults;
-        notificationManager.notify(PendingIntentConstants.CAPTCHAS_NOTIFICATION_ID, notification);
-
     }
 
     /**
@@ -911,8 +849,10 @@ public class BugleNotifications {
 
             maybeAddWearableConversationLog(wearableExtender,
                     (MultiMessageNotificationState) notificationState);
+            addWearableVoiceReplyAction(notifBuilder, wearableExtender, notificationState);
             addDownloadMmsAction(notifBuilder, wearableExtender, notificationState);
-            addWearableVoiceReplyAction(wearableExtender, notificationState);
+            addWearableVoiceCallAction(notifBuilder, wearableExtender, notificationState);
+            addWearableReadAction(notifBuilder, wearableExtender, notificationState);
         }
 
         // Apply the wearable options and build & post the notification
@@ -954,7 +894,56 @@ public class BugleNotifications {
         }
     }
 
-    private static void addWearableVoiceReplyAction(
+    private static void addWearableReadAction(final NotificationCompat.Builder notifBuilder,
+            final WearableExtender wearableExtender, final NotificationState notificationState) {
+        if (!(notificationState instanceof MultiMessageNotificationState)) {
+            return;
+        }
+        final Context context = Factory.get().getApplicationContext();
+
+        final String conversationId = notificationState.mConversationIds.first();
+
+        Intent mrIntent = new Intent(context, MarkAsReadReceiver.class);
+        mrIntent.putExtra(ConversationColumns.SMS_THREAD_ID, conversationId);
+        final PendingIntent mrPendingIntent = PendingIntent.getBroadcast(context, 0, mrIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        final NotificationCompat.Action.Builder actionBuilder =
+                new NotificationCompat.Action.Builder(R.drawable.ic_read,
+                        context.getString(R.string.notification_read), mrPendingIntent);
+        notifBuilder.addAction(actionBuilder.build());
+
+        // Support the action on a wearable device as well
+        wearableExtender.addAction(actionBuilder.build());
+    }
+
+    private static void addWearableVoiceCallAction(final NotificationCompat.Builder notifBuilder,
+            final WearableExtender wearableExtender, final NotificationState notificationState) {
+        if (!(notificationState instanceof MultiMessageNotificationState)) {
+            return;
+        }
+        final MultiMessageNotificationState multiMessageNotificationState =
+                (MultiMessageNotificationState) notificationState;
+        final Context context = Factory.get().getApplicationContext();
+
+        ConversationLineInfo convInfo = multiMessageNotificationState.mConvList.mConvInfos.get(0);
+        if (TextUtils.isEmpty(convInfo.mSenderNormalizedDestination)) return;
+
+        Intent callIntent = new Intent(Intent.ACTION_CALL,
+                Uri.parse(UriUtil.SCHEME_TEL + convInfo.mSenderNormalizedDestination));
+        final PendingIntent callPendingIntent = PendingIntent.getActivity(context, 0, callIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        final NotificationCompat.Action.Builder actionBuilder =
+                new NotificationCompat.Action.Builder(R.drawable.ic_call,
+                        context.getString(R.string.notification_call), callPendingIntent);
+        notifBuilder.addAction(actionBuilder.build());
+
+        // Support the action on a wearable device as well
+        wearableExtender.addAction(actionBuilder.build());
+    }
+
+    private static void addWearableVoiceReplyAction(final NotificationCompat.Builder notifBuilder,
             final WearableExtender wearableExtender, final NotificationState notificationState) {
         if (!(notificationState instanceof MultiMessageNotificationState)) {
             return;
@@ -978,12 +967,9 @@ public class BugleNotifications {
                 .getPendingIntentForSendingMessageToConversation(context,
                         conversationId, selfId, requiresMms, requestCode);
 
-        final int replyLabelRes = requiresMms ? R.string.notification_reply_via_mms :
-            R.string.notification_reply_via_sms;
-
         final NotificationCompat.Action.Builder actionBuilder =
-                new NotificationCompat.Action.Builder(R.drawable.ic_wear_reply,
-                        context.getString(replyLabelRes), replyPendingIntent);
+                new NotificationCompat.Action.Builder(R.drawable.ic_reply,
+                        context.getString(R.string.notification_reply), replyPendingIntent);
         final String[] choices = context.getResources().getStringArray(
                 R.array.notification_reply_choices);
         final RemoteInput remoteInput = new RemoteInput.Builder(Intent.EXTRA_TEXT).setLabel(
@@ -991,6 +977,9 @@ public class BugleNotifications {
                 setChoices(choices)
                 .build();
         actionBuilder.addRemoteInput(remoteInput);
+        notifBuilder.addAction(actionBuilder.build());
+
+        // Support the action on a wearable device as well
         wearableExtender.addAction(actionBuilder.build());
     }
 
@@ -1056,6 +1045,86 @@ public class BugleNotifications {
 
         LogUtil.i(TAG, "Notifying for conversation " + conversationId + "; "
                 + "tag = " + notificationTag + ", type = " + type);
+    }
+
+    private static class CaptchasNotificationState extends MessageNotificationState {
+        CaptchasNotificationState() {
+            super(null);
+        }
+
+        @Override
+        protected Style build(Builder builder) {
+            return null;
+        }
+
+        @Override
+        public boolean getNotificationVibrate() {
+            return true;
+        }
+    }
+
+    private static void addDeleteMessageAction(final NotificationCompat.Builder notifBuilder, final String messageId) {
+        final Context context = Factory.get().getApplicationContext();
+
+        Intent deleteIntent = new Intent(context, DeleteMessageReceiver.class);
+        deleteIntent.putExtra(PartColumns.MESSAGE_ID, messageId);
+        final PendingIntent deletePendingIntent = PendingIntent.getBroadcast(context, 1, deleteIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        final NotificationCompat.Action.Builder actionBuilder =
+                new NotificationCompat.Action.Builder(R.drawable.ic_delete_small_light,
+                        context.getString(R.string.notification_delete), deletePendingIntent);
+        notifBuilder.addAction(actionBuilder.build());
+    }
+
+    public static synchronized void postCaptchasNotification(String conversationId, String messageId, String captchas, String captchaProvider) {
+        cancel(PendingIntentConstants.CAPTCHAS_NOTIFICATION_ID);
+        final NotificationState state = MessageNotificationState.getNotificationState();
+        final Context context = Factory.get().getApplicationContext();
+
+        String title = TextUtils.isEmpty(captchaProvider) ? String.format(context.getString(R.string.captchas_title), captchas)
+                : String.format(context.getString(R.string.captchas_with_provider_title), captchas, captchaProvider);
+        String content = context.getString(R.string.captchas_content);
+
+        Intent pendingIntent = new Intent();
+        pendingIntent.setClass(context, CaptchasReceiver.class);
+        pendingIntent.putExtra("captchas", captchas);
+        pendingIntent.putExtra(PartColumns.MESSAGE_ID, messageId);
+        pendingIntent.putExtra(ConversationColumns.SMS_THREAD_ID, conversationId);
+        PendingIntent captchasIntent = PendingIntent.getBroadcast(context, 0, pendingIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+        builder.setContentTitle(title)
+                .setTicker(title)
+                .setSmallIcon(R.drawable.ic_sms_light)
+                .setContentText(content)
+                .setWhen(state != null ? state.getLatestReceivedTimestamp() : System.currentTimeMillis())
+                // Returning PRIORITY_HIGH causes L to put up a HUD notification. Without it, the ticker
+                // isn't displayed.
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setContentIntent(captchasIntent)
+                .setSound(state != null ? RingtoneUtil.getNotificationRingtoneUri(state.getRingtoneUri())
+                        : getNotificationRingtoneUriForConversationId(conversationId))
+                .setColor(context.getResources().getColor(R.color.notification_accent_color));
+
+        addDeleteMessageAction(builder, messageId);
+
+        final NotificationCompat.BigTextStyle bigTextStyle =
+                new NotificationCompat.BigTextStyle(builder);
+        bigTextStyle.setBigContentTitle(title);
+        bigTextStyle.bigText(content);
+        final Notification notification = bigTextStyle.build();
+
+        final NotificationManagerCompat notificationManager =
+                NotificationManagerCompat.from(Factory.get().getApplicationContext());
+
+        int defaults = Notification.DEFAULT_LIGHTS;
+        if (BugleNotifications.shouldVibrate(new CaptchasNotificationState())) {
+            defaults |= Notification.DEFAULT_VIBRATE;
+        }
+        notification.defaults = defaults;
+        notificationManager.notify(PendingIntentConstants.CAPTCHAS_NOTIFICATION_ID, notification);
     }
 
     // This is the message string used in each line of an inboxStyle notification.
