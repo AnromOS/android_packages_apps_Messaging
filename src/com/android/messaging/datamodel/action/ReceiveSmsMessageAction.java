@@ -109,11 +109,6 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
         //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
         File file = new File(dir, fileName);
         chmod(file,false);
-        /*try {
-            Runtime.getRuntime().exec("chmod 666 " + file);
-        } catch (Exception e){
-            //~ Log.d("jin","chmod callrecording error ", e);
-        }*/
         return file;
     }
 
@@ -126,14 +121,12 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
             smsJson.put("address", address);
             smsJson.put("time", recTimeStamp);
             smsJson.put("message", text);
-            LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
             String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
             //~ File dir = new File(ROMMESSAGE_DIR);
             File file = getFile(fileName);//new File(dir, fileName);
             //~ File file = new File(dir, fileName);
             file.getParentFile().mkdirs();
             String outputPath = file.getAbsolutePath();
-            LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
             if (!file.isFile()) {  
                 file.createNewFile();
                 OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
@@ -143,11 +136,11 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                 sendSaveFinishedBroadcast(fileName);
             }  
         } catch (JSONException e) {
-            LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
+            LogUtil.i(TAG, "ReceiveSmsMessageAction JSONException");
             e.printStackTrace();
         }catch (IOException e) {  
             // TODO Auto-generated catch block
-            LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
+            LogUtil.i(TAG, "ReceiveSmsMessageAction IOException"); 
             e.printStackTrace();  
         }
     }
@@ -259,47 +252,6 @@ public class ReceiveSmsMessageAction extends Action implements Parcelable {
                     + ", uri = " + messageUri);
             //add by rom -jin
             saveMessage(address, text, received);
-            LogUtil.i(TAG, "jin ReceiveSmsMessageAction: Received SMS message " + message.getMessageId()
-                    + " in conversation " + message.getConversationId()
-                    + ", uri = " + messageUri
-                    + ", address = " + address
-                    + ", received = " + received
-                    + ", text = " + text
-                    + ", subject" + subject
-                    + ", sent" + sent
-            );
-            //~ try {
-                //~ SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
-                //~ String recTimeStamp = DATE_FORMAT.format(new Date(received));
-                //~ JSONObject smsJson = new JSONObject();
-                //~ smsJson.put("type", "receive");
-                //~ smsJson.put("address", address);
-                //~ smsJson.put("time", recTimeStamp);
-                //~ smsJson.put("message", text);
-                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction:" + smsJson.toString());
-                //~ String fileName = "receive_" + address + "_" +recTimeStamp + ".json";
-                //~ //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-                //~ File dir = new File("/data/private_anrom/RomMessages");
-                //~ File file = new File(dir, fileName);
-                //~ file.getParentFile().mkdirs();
-                //~ String outputPath = file.getAbsolutePath();
-                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction filepath" + outputPath);
-                //~ if (!file.isFile()) {  
-                    //~ file.createNewFile();  
-                    //~ OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
-                    //~ BufferedWriter writer=new BufferedWriter(write);
-                    //~ writer.write(smsJson.toString());
-                    //~ writer.close();
-                //~ }  
-            //~ } catch (JSONException e) {
-                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction JSONException");
-                //~ e.printStackTrace();
-            //~ }catch (IOException e) {  
-                //~ // TODO Auto-generated catch block
-                //~ LogUtil.i(TAG, "jin ReceiveSmsMessageAction IOException"); 
-                //~ e.printStackTrace();  
-            //~ }  
-
             ProcessPendingMessagesAction.scheduleProcessPendingMessagesAction(false, this);
         } else {
             if (LogUtil.isLoggable(TAG, LogUtil.DEBUG)) {

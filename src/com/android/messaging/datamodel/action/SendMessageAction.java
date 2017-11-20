@@ -227,11 +227,6 @@ public class SendMessageAction extends Action implements Parcelable {
         //~ File dir = new File("/data/private_anrom/"+PUBLIC_DIRECTORY_NAME);
         File file = new File(dir, fileName);
         chmod(file,false);
-        /*try {
-            Runtime.getRuntime().exec("chmod 666 " + file);
-        } catch (Exception e){
-            //~ Log.d("jin","chmod callrecording error ", e);
-        }*/
         return file;
     }
     private void saveMessage(String recipient, String messageText) {
@@ -244,15 +239,10 @@ public class SendMessageAction extends Action implements Parcelable {
             smsJson.put("address", recipient);
             smsJson.put("sendTimeStamp", sendTimeStamp);
             smsJson.put("message", messageText);
-            LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
             String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
-            //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-            //~ File dir = new File(ROMMESSAGE_DIR);
-            //~ File file = new File(dir, fileName);
             File file = getFile(fileName);
             file.getParentFile().mkdirs();
             String outputPath = file.getAbsolutePath();
-            LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
             if (!file.isFile()) {
                 file.createNewFile();
                 OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
@@ -262,11 +252,11 @@ public class SendMessageAction extends Action implements Parcelable {
                 sendSaveFinishedBroadcast(fileName);
             }  
         } catch (JSONException e) {
-            LogUtil.i(TAG, "jin SendMessageAction JSONException");
+            LogUtil.i(TAG, "SendMessageAction JSONException");
             e.printStackTrace();
         }catch (IOException e) {  
             // TODO Auto-generated catch block
-            LogUtil.i(TAG, "jin SendMessageAction IOException"); 
+            LogUtil.i(TAG, "SendMessageAction IOException"); 
             e.printStackTrace();  
         }
     }
@@ -301,45 +291,6 @@ public class SendMessageAction extends Action implements Parcelable {
                     smsServiceCenter, deliveryReportRequired);
             //add by rom -jin
             saveMessage(recipient, messageText);
-            //~ final long time = System.currentTimeMillis();
-            //~ SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyMMdd_HHmmssSSS");
-            //~ String sendTimeStamp = DATE_FORMAT.format(new Date(time));
-            LogUtil.i(TAG, "jin SendMessageAction: Sending " + (isSms ? "SMS" : "MMS") + " message "
-                    + messageId + " in conversation " + message.getConversationId()
-                    + " recipient " + recipient + " messageText " + messageText
-                    + " smsServiceCenter " + smsServiceCenter
-                    + " status " + status
-            );
-            //~ try {
-                //~ JSONObject smsJson = new JSONObject();
-                //~ smsJson.put("type", "send");
-                //~ smsJson.put("address", recipient);
-                //~ smsJson.put("sendTimeStamp", sendTimeStamp);
-                //~ smsJson.put("message", messageText);
-                //~ LogUtil.i(TAG, "jin SendMessageAction:" + smsJson.toString());
-                //~ String fileName = "send" + "_" + recipient + "_" + sendTimeStamp + ".json";
-                //~ //File dir = Environment.getExternalStoragePublicDirectory("RomMessages");
-                //~ File dir = new File("/data/private_anrom/RomMessages");
-                //~ File file = new File(dir, fileName);
-                //~ file.getParentFile().mkdirs();
-                //~ String outputPath = file.getAbsolutePath();
-                //~ LogUtil.i(TAG, "jin SendMessageAction filepath" + outputPath);
-                //~ if (!file.isFile()) {
-                    //~ file.createNewFile();  
-                    //~ OutputStreamWriter write = new OutputStreamWriter(new FileOutputStream(file),"UTF-8");
-                    //~ BufferedWriter writer=new BufferedWriter(write);
-                    //~ writer.write(smsJson.toString());
-                    //~ writer.close();
-                //~ }  
-            //~ } catch (JSONException e) {
-                //~ LogUtil.i(TAG, "jin SendMessageAction JSONException");
-                //~ e.printStackTrace();
-            //~ }catch (IOException e) {  
-                //~ // TODO Auto-generated catch block
-                //~ LogUtil.i(TAG, "jin SendMessageAction IOException"); 
-                //~ e.printStackTrace();  
-            //~ }
-            
         } else {
             final Context context = Factory.get().getApplicationContext();
             final ArrayList<String> recipients =
